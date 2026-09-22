@@ -1,5 +1,7 @@
 from mcp.server.mcpserver import MCPServer
 import subprocess, json
+from datetime import datetime
+from pathlib import Path
 
 mcp = MCPServer("wireshark-mcp-server")
 
@@ -31,6 +33,27 @@ def list_interfaces():
         })
 
     return interfaces
+
+@mcp.tool()
+def capture_traffic(duration_seconds: int,interface: str="Wi-Fi"):
+    Path("captures").mkdir(exist_ok=True)
+    filepath = f"captures/capture_{datetime.now().strftime("%Y%m%d_%H%M%S")}.pcap"
+
+    result = subprocess.run(
+        ["tshark", "-i", interface, "-a", f"duration:{duration_seconds}", "-w", filepath],
+        capture_output=True,
+        text=True
+    )
+
+    return {
+        "status": "success" if result.returncode == 0 else "error",
+        "filepath": filepath,
+        "duration_seconds": duration_seconds,
+        "interface": interface,
+        "message": result.stderr.strip()
+    }
+
+
 
 if __name__ == "__main__":
     mcp.run()
